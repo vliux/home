@@ -28,7 +28,7 @@ class BackupRunner(object):
         self.destCfgParser = destCfgParser
 
     def __form_cmd_str__(self, src, dest):
-        return "robocopy %s %s " % (src, dest)
+        return "robocopy %s %s /MIR /NP /FP" % (src, dest)
 
     def __chk_cfgs__(self):
         ind = 0
@@ -51,9 +51,23 @@ class BackupRunner(object):
             ind += 1
 
         return ind
-
+    
+    def __mount_unc__(self):
+        for cfg in [self.srcCfgParser, self.destCfgParser]:
+            if(cfg.has_option('DEFAULT', 'unc.root')):
+                root = cfg.get('DEFAULT', 'unc.root')
+                usr = cfg.get('DEFAULT', 'unc.usr')
+                passwd = cfg.get('DEFAULT', 'unc.passwd')
+                print "Mount UNC share %s ..." % root
+                __cmd__ = "net use %s %s /USER:%s /PERSISTENT:YES" % (root, passwd, usr)
+                print __cmd__
+                p = subprocess.Popen(__cmd__, shell = True)
+                p.communicate()
+                print "net-use returned %d" % p.returncode
+    
     def Run(self):
         numOfSects = self.__chk_cfgs__()
+        self.__mount_unc__()
         ind = 1
         for sec in self.destCfgParser.sections():
             src = self.srcCfgParser.get(sec, "src")
