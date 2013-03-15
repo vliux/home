@@ -58,7 +58,6 @@ class BackupRunner(object):
         for sec in self.destCfgParser.sections():
             src = self.srcCfgParser.get(sec, "src")
             dest = self.destCfgParser.get(sec, "dest")
-
             print "*" * 60
             print "* %d of %d" % (ind, numOfSects)
             print "* src = " + src
@@ -68,8 +67,14 @@ class BackupRunner(object):
             print __cmd__
             p = subprocess.Popen(__cmd__, shell = True)
             p.communicate()
-            if(p.returncode != 0):
-                print "[ERROR] Failed %s --> %s" % (src, dest)
+            if(p.returncode == 1):
+                print "[OK] %s --> %s succeeded" % (src, dest)
+            elif(p.returncode < 8):
+                print "[OK] %s --> %s finished (robocopy returned %d)" % (src, dest, p.returncode)
+            else:
+                print "[ERROR] Failed %s --> %s (robocopy returned %d)" % (src, dest, p.returncode)
+                print "[ERROR] Backup terminated with error"
+                return
             ind += 1
 
 # Main
