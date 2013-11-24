@@ -23,9 +23,11 @@ def ReadCfg(cfgFile):
         return srcCfgParser
 
 class BackupRunner(object):
-    def __init__(self, srcCfgParser, destCfgParser):
+    # syncContent: content to sync, should be the name as defined in cfg files.
+    def __init__(self, srcCfgParser, destCfgParser, syncContent = None):
         self.srcCfgParser = srcCfgParser
         self.destCfgParser = destCfgParser
+        self.syncContent = syncContent
 
     def __form_cmd_str__(self, src, dest):
         return "robocopy %s %s /MIR /NP /FP" % (src, dest)
@@ -70,6 +72,10 @@ class BackupRunner(object):
         self.__mount_unc__()
         ind = 1
         for sec in self.destCfgParser.sections():
+            if self.syncContent and self.syncContent != sec:
+                print "[%s] is not same as syncContent '%s', ignore it" % (sec, self.syncContent)
+                continue
+            
             src = self.srcCfgParser.get(sec, "src")
             dest = self.destCfgParser.get(sec, "dest")
             print "*" * 60
@@ -96,12 +102,13 @@ class BackupRunner(object):
 if __name__ == "__main__":
     argParser = argparse.ArgumentParser(description = 'Run backups according to config file (%s)' % BK_SRC_CFG)
     argParser.add_argument('--dest', action = 'store', required = True)
+    argParser.add_argument('--content', action = 'store', required = True)
     args = argParser.parse_args()
 
     srcCfgParser = ReadCfg(BK_SRC_CFG)
     destCfgParser = ReadCfg(os.path.join(SCRIPT_DIR, "bk_dest_%s.cfg" % args.dest))
 
-    bkRunner = BackupRunner(srcCfgParser, destCfgParser)
+    bkRunner = BackupRunner(srcCfgParser, destCfgParser, args.content)
     try:
         bkRunner.Run()
     except ValueError, ve:
