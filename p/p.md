@@ -27,12 +27,13 @@ TODOs from 2017-08-29
 - personal utilities
 - Giraffe
 
-### Security
-- Book <白帽子谈web安全> [10d]*
-
 ### Interviews
 - resume submission
 - algorithms
+
+# Seconday tasks
+### Security
+- Book <白帽子谈web安全> [10d]
 
 
 
