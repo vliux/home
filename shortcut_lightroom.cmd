@@ -1,0 +1,1 @@
+cmd /K python RunBackup.py --dest master --content lightroom

@@ -30,7 +30,7 @@ class BackupRunner(object):
         self.syncContent = syncContent
 
     def __form_cmd_str__(self, src, dest):
-        return "robocopy %s %s /MIR /NP /FP" % (src, dest)
+        return "robocopy \"%s\" \"%s\" /MIR /FP" % (src, dest)
 
     def __chk_cfgs__(self):
         ind = 0
