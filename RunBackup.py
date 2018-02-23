@@ -5,11 +5,16 @@ import argparse
 import subprocess
 import ConfigParser
 import time
+import platform
 
 # Global vars
 # **********************************
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
-BK_SRC_CFG = os.path.join(SCRIPT_DIR, "bk_src.cfg")
+CFG_BASE = os.path.join(SCRIPT_DIR, 'config')
+SRC_CFG = "src.cfg"
+
+OS_OSX = "Darwin"
+OS_WINDOWS = "Windows"
 
 # Classes & functions
 # **********************************
@@ -22,6 +27,15 @@ def ReadCfg(cfgFile):
     else:
         return srcCfgParser
 
+def getOsCmd(src, dest):
+    currOs = platform.system()
+    if(OS_WINDOWS == currOs):
+        return "robocopy \"%s\" \"%s\" /MIR /FP" % (src, dest)
+    elif(OS_OSX == currOs):
+        return "rsync -varH --delete --progress %s %s" % (src, dest)
+    else:
+        raise Exception('OS not supported yet: neither OSX nor Windows')
+
 class BackupRunner(object):
     # syncContent: content to sync, should be the name as defined in cfg files.
     def __init__(self, srcCfgParser, destCfgParser, syncContent = None):
@@ -29,8 +43,8 @@ class BackupRunner(object):
         self.destCfgParser = destCfgParser
         self.syncContent = syncContent
 
-    def __form_cmd_str__(self, src, dest):
-        return "robocopy \"%s\" \"%s\" /MIR /FP" % (src, dest)
+    #def __form_cmd_str__(self, src, dest):
+    #    return "robocopy \"%s\" \"%s\" /MIR /FP" % (src, dest)
 
     def __chk_cfgs__(self):
         ind = 0
@@ -83,7 +97,7 @@ class BackupRunner(object):
             print "* src = " + src
             print "* dst = " + dest
             time.sleep(0.5)
-            __cmd__ = self.__form_cmd_str__(src, dest)
+            __cmd__ = getOsCmd(src, dest)
             print __cmd__
             p = subprocess.Popen(__cmd__, shell = True)
             p.communicate()
@@ -100,13 +114,21 @@ class BackupRunner(object):
 # Main
 # **********************************
 if __name__ == "__main__":
-    argParser = argparse.ArgumentParser(description = 'Run backups according to config file (%s)' % BK_SRC_CFG)
-    argParser.add_argument('--dest', action = 'store', required = True)
-    argParser.add_argument('--content', action = 'store', required = True)
+    argParser = argparse.ArgumentParser(description = 'Run backups according to config file (%s)' % SRC_CFG)
+    argParser.add_argument('--cfg', action = 'store', required = True, help = 'config name under SCRIPT_DIR/config/')
+    argParser.add_argument('--dest', action = 'store', required = True, help = 'destination name, as dest_sg3.cfg it is sg3')
+    argParser.add_argument('--content', action = 'store', required = True, help = 'content to be backed-up, as \'photo\'')
     args = argParser.parse_args()
 
-    srcCfgParser = ReadCfg(BK_SRC_CFG)
-    destCfgParser = ReadCfg(os.path.join(SCRIPT_DIR, "bk_dest_%s.cfg" % args.dest))
+    cfgDir = os.path.join(CFG_BASE, args.cfg)
+    if(os.path.isdir(cfgDir)):
+        print "I will do backup for config under: %s" % cfgDir
+    else:
+        print "[ERROR] invalid config name: %s" % args.cfg
+        sys.exit(1)
+
+    srcCfgParser = ReadCfg(os.path.join(cfgDir, SRC_CFG))
+    destCfgParser = ReadCfg(os.path.join(cfgDir, "dest_%s.cfg" % args.dest))
 
     bkRunner = BackupRunner(srcCfgParser, destCfgParser, args.content)
     try:
