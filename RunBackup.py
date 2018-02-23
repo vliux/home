@@ -55,6 +55,7 @@ def checkOsCmdRetCode(returncode, src, dest):
             return 0
         else:
             print "[ERROR] Failed %s --> %s (rsync returned %d)" % (src, dest, returncode)
+            return 1
     else:
         raise Exception('OS not supported yet: neither OSX nor Windows') 
 
