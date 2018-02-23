@@ -36,15 +36,34 @@ def getOsCmd(src, dest):
     else:
         raise Exception('OS not supported yet: neither OSX nor Windows')
 
+def checkOsCmdRetCode(returncode, src, dest):
+    currOs = platform.system()
+    if(OS_WINDOWS == currOs):
+        if(returncode == 1):
+            print "[OK] %s --> %s succeeded" % (src, dest)
+            return 0
+        elif(p.returncode < 8):
+            print "[OK] %s --> %s finished (robocopy returned %d)" % (src, dest, returncode)
+            return 0
+        else:
+            print "[ERROR] Failed %s --> %s (robocopy returned %d)" % (src, dest, returncode)
+            print "[ERROR] Backup terminated with error"
+            return 1
+    elif(OS_OSX == currOs):
+        if(returncode == 0):
+            print "[OK] %s --> %s succeeded" % (src, dest)
+            return 0
+        else:
+            print "[ERROR] Failed %s --> %s (rsync returned %d)" % (src, dest, returncode)
+    else:
+        raise Exception('OS not supported yet: neither OSX nor Windows') 
+
 class BackupRunner(object):
     # syncContent: content to sync, should be the name as defined in cfg files.
     def __init__(self, srcCfgParser, destCfgParser, syncContent = None):
         self.srcCfgParser = srcCfgParser
         self.destCfgParser = destCfgParser
         self.syncContent = syncContent
-
-    #def __form_cmd_str__(self, src, dest):
-    #    return "robocopy \"%s\" \"%s\" /MIR /FP" % (src, dest)
 
     def __chk_cfgs__(self):
         ind = 0
@@ -101,15 +120,11 @@ class BackupRunner(object):
             print __cmd__
             p = subprocess.Popen(__cmd__, shell = True)
             p.communicate()
-            if(p.returncode == 1):
-                print "[OK] %s --> %s succeeded" % (src, dest)
-            elif(p.returncode < 8):
-                print "[OK] %s --> %s finished (robocopy returned %d)" % (src, dest, p.returncode)
+            if(checkOsCmdRetCode(p.returncode, src, dest) == 0):
+                ind += 1
+                continue
             else:
-                print "[ERROR] Failed %s --> %s (robocopy returned %d)" % (src, dest, p.returncode)
-                print "[ERROR] Backup terminated with error"
                 return
-            ind += 1
 
 # Main
 # **********************************
