@@ -1,11 +1,1 @@
-cmd /K python RunBackup.py --cfg mipro --dest sg3 --content photo_iphone2
-
-cmd /K python RunBackup.py --cfg mipro --dest sg3 --content photo_nexus6p
-
-cmd /K python RunBackup.py --cfg mipro --dest sg3 --content photo_iphone
-
-cmd /K python RunBackup.py --cfg mipro --dest sg3 --content photo_g9300
-
-cmd /K python RunBackup.py --cfg mipro --dest sg3 --content photo_mix2
-
-cmd /K python RunBackup.py --cfg mipro --dest sg3 --content photo_yydiphone
+cmd /K python RunBackup.py --cfg mipro --dest sg3 --content "lr_catalog photo_iphone2 photo_nexus6p photo_iphone photo_g9300 photo_mix2 photo_yydiphone"

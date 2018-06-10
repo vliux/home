@@ -42,7 +42,7 @@ def checkOsCmdRetCode(returncode, src, dest):
         if(returncode == 1):
             print "[OK] %s --> %s succeeded" % (src, dest)
             return 0
-        elif(p.returncode < 8):
+        elif(returncode < 8):
             print "[OK] %s --> %s finished (robocopy returned %d)" % (src, dest, returncode)
             return 0
         else:
@@ -64,8 +64,8 @@ class BackupRunner(object):
     def __init__(self, srcCfgParser, destCfgParser, syncContent = None):
         self.srcCfgParser = srcCfgParser
         self.destCfgParser = destCfgParser
-        self.syncContent = syncContent
-
+        self.syncContent = syncContent.split(' ')
+        
     def __chk_cfgs__(self):
         ind = 0
         for sec in self.destCfgParser.sections():
@@ -106,26 +106,24 @@ class BackupRunner(object):
         self.__mount_unc__()
         ind = 1
         for sec in self.destCfgParser.sections():
-            if self.syncContent and self.syncContent != sec:
-                print "[%s] is not same as syncContent '%s', ignore it" % (sec, self.syncContent)
-                continue
-            
-            src = self.srcCfgParser.get(sec, "src")
-            dest = self.destCfgParser.get(sec, "dest")
-            print "*" * 60
-            print "* %d of %d" % (ind, numOfSects)
-            print "* src = " + src
-            print "* dst = " + dest
-            time.sleep(0.5)
-            __cmd__ = getOsCmd(src, dest)
-            print __cmd__
-            p = subprocess.Popen(__cmd__, shell = True)
-            p.communicate()
-            if(checkOsCmdRetCode(p.returncode, src, dest) == 0):
-                ind += 1
-                continue
-            else:
-                return
+            if sec and len(self.syncContent) > 0 and sec in self.syncContent:
+                print "syncing section [%s]" % (sec)            
+                src = self.srcCfgParser.get(sec, "src")
+                dest = self.destCfgParser.get(sec, "dest")
+                print "*" * 60
+                print "* %d of %d" % (ind, numOfSects)
+                print "* src = " + src
+                print "* dst = " + dest
+                time.sleep(0.5)
+                __cmd__ = getOsCmd(src, dest)
+                print __cmd__
+                p = subprocess.Popen(__cmd__, shell = True)
+                p.communicate()
+                if(checkOsCmdRetCode(p.returncode, src, dest) == 0):
+                    ind += 1
+                    continue
+                else:
+                    return
 
 # Main
 # **********************************
@@ -143,6 +141,10 @@ if __name__ == "__main__":
         print "[ERROR] invalid config name: %s" % args.cfg
         sys.exit(1)
 
+    if(not args.content):
+        print "[ERROR] must specify one or more content to be backed up"
+        sys.exit(1)
+    
     srcCfgParser = ReadCfg(os.path.join(cfgDir, SRC_CFG))
     destCfgParser = ReadCfg(os.path.join(cfgDir, "dest_%s.cfg" % args.dest))
 
