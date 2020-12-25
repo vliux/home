@@ -1,1 +1,0 @@
-cmd /K python RunBackup.py --cfg mipro --dest sg3 --content "lr_catalog photo_iphone2 photo_nexus6p photo_iphone photo_g9300 photo_mix2 photo_yydiphone"
