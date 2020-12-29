@@ -143,7 +143,7 @@ class BackupRunner(object):
         return result
 
     def doSummarize(self, succCamelxConfigList = [], failedCamelxConfigList = []):
-        print("\n*" * 60)
+        print("*" * 60)
         print("* Backup %s" % "succeeded!" if len(succCamelxConfigList) > 0 and len(failedCamelxConfigList) <= 0 else "failed!")
         print("*" * 60)
         if len(succCamelxConfigList) > 0:
