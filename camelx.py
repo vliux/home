@@ -1,6 +1,5 @@
 import os
 import os.path
-import re
 import sys
 import argparse
 import subprocess
@@ -16,19 +15,54 @@ CFG_FILE_NAME = "CAMELX.cfg"
 OS_OSX = "Darwin"
 OS_WINDOWS = "Windows"
 
-EXCLUDE_DIRS = ["$RECYCLE.BIN", "System Volume Information", ".Trashes", ".Spotlight-V100"]
+CFG_SECTION_DEFAULT = "DEFAULT"
+CFG_KEY_SRC_ROOT = "src.root"
+CFG_KEY_DEST_ROOT = "dest.root"
+CFG_KEY_DIR = "dir"
 
-# Classes & functions
+
+# Config classes
 # **********************************
-def ReadCfg(cfgFile):
-    srcCfgParser = ConfigParser.ConfigParser()
-    print "Read cfg %s" % cfgFile
-    files = srcCfgParser.read([cfgFile])
-    if not files:
-        raise Exception('Unable to read backup config file at %s' % cfgFile)
-    else:
-        return srcCfgParser
+class CamelxConfig:
+    def __init__(self, srcPath, destPath):
+        self.srcPath = srcPath
+        self.destPath = destPath
 
+
+class CamelxConfigParser(object):
+    def __init__(self, cfgFile):
+        self.cfgFile = cfgFile
+        self.cfgParser = self.readCfg()
+
+    def readCfg(self):
+        srcCfgParser = ConfigParser.ConfigParser()
+        print "Read cfg %s" % self.cfgFile
+        files = srcCfgParser.read([self.cfgFile])
+        if not files:
+            raise Exception('Unable to read backup config file at %s' % self.cfgFile)
+        else:
+            return srcCfgParser
+
+    def parse(self):
+        srcRoot = self.cfgParser.get(CFG_SECTION_DEFAULT, CFG_KEY_SRC_ROOT)
+        destRoot = self.cfgParser.get(CFG_SECTION_DEFAULT, CFG_KEY_DEST_ROOT)
+        results = []
+        for section in self.cfgParser.sections():
+            dirName = self.checkNonNullValue(CFG_KEY_DIR, self.cfgParser.get(section, CFG_KEY_DIR))
+            src = os.path.join(srcRoot, dirName)
+            dest = os.path.join(destRoot, dirName)
+            results.append(CamelxConfig(src, dest))
+        return results
+
+    def checkNonNullValue(self, key, value):
+        if not value:
+            raise Exception("Undefined config in file %s, key=%s" % (self.cfgFile, key))
+        else:
+            return value
+
+
+# Utility functions
+# **********************************
 def getOsCmd(src, dest):
     currOs = platform.system()
     if(OS_WINDOWS == currOs):
@@ -61,76 +95,57 @@ def checkOsCmdRetCode(returncode, src, dest):
     else:
         raise Exception('OS not supported yet: neither OSX nor Windows') 
 
-class BackupRunner(object):
-    # syncContent: content to sync, should be the name as defined in cfg files.
-    def __init__(self, cfgParser, srcPathRoot, destPathRoot):
-        self.cfgParser = cfgParser
-        print cfgParser
-        self.srcPathRoot = srcPathRoot
-        self.destPathRoot = destPathRoot
-        self.srcPathReExpList = self.__compile_src_path_re_list__()
-    
-    def __compile_src_path_re_list__(self):
-        srcPathReExpList = []
-        for sect in self.cfgParser.sections():
-            srcPathReExp = self.cfgParser.get(sect, "src")
-            srcPathReExpList.append(re.compile(srcPathReExp))
-        return srcPathReExpList
 
-    def __mount_unc_if_needed__(self):
-            if(self.cfgParser.has_option('DEFAULT', 'unc.root')):
-                root = cfg.get('DEFAULT', 'unc.root')
-                usr = cfg.get('DEFAULT', 'unc.usr')
-                passwd = cfg.get('DEFAULT', 'unc.passwd')
-                print "Mount UNC share %s ..." % root
-                __cmd__ = "net use %s %s /USER:%s /PERSISTENT:YES" % (root, passwd, usr)
-                print __cmd__
-                p = subprocess.Popen(__cmd__, shell = True)
-                p.communicate()
-                print "net-use returned %d" % p.returncode
+# Backup runner class
+# **********************************
+class BackupRunner(object):
+    def __init__(self, camelxConfigParser):
+        self.camelxConfigParser = camelxConfigParser
+
+    #def __mount_unc_if_needed__(self):
+    #        if(self.cfgParser.has_option('DEFAULT', 'unc.root')):
+    #            root = cfg.get('DEFAULT', 'unc.root')
+    #            usr = cfg.get('DEFAULT', 'unc.usr')
+    #            passwd = cfg.get('DEFAULT', 'unc.passwd')
+    #            print "Mount UNC share %s ..." % root
+    #            __cmd__ = "net use %s %s /USER:%s /PERSISTENT:YES" % (root, passwd, usr)
+    #            print __cmd__
+    #            p = subprocess.Popen(__cmd__, shell = True)
+    #            p.communicate()
+    #            print "net-use returned %d" % p.returncode
     
     def Run(self):
-        self.__mount_unc_if_needed__()
+        #self.__mount_unc_if_needed__()
+        camelxConfigList = self.camelxConfigParser.parse()
         ind = 1
-        for fd in os.listdir(self.srcPathRoot):
-            if fd in EXCLUDE_DIRS:
-                print "%s in EXCLUDE list, skipping ..." % fd
-                continue
-            elif fd == CFG_FILE_NAME:
+        for camelxConfig in camelxConfigList:
+            print "*" * 60
+            print "* NO. %d" % (ind)
+            print "* src = " + camelxConfig.srcPath
+            print "* dst = " + camelxConfig.destPath
+            time.sleep(0.5)
+            __cmd__ = getOsCmd(camelxConfig.srcPath, camelxConfig.destPath)
+            print __cmd__
+            p = subprocess.Popen(__cmd__, shell = True)
+            p.communicate()
+            if(checkOsCmdRetCode(p.returncode, camelxConfig.srcPath, camelxConfig.destPath) == 0):
+                ind += 1
                 continue
             else:
-                for srcPathReExp in self.srcPathReExpList:
-                    print srcPathReExp
-                    if srcPathReExp.match(fd):           
-                        src = os.path.join(self.srcPathRoot, fd)
-                        dest = os.path.join(self.destPathRoot, fd)
-                        print "*" * 60
-                        print "* NO. %d" % (ind)
-                        print "* src = " + src
-                        print "* dst = " + dest
-                        time.sleep(0.5)
-                        __cmd__ = getOsCmd(src, dest)
-                        print __cmd__
-                        p = subprocess.Popen(__cmd__, shell = True)
-                        p.communicate()
-                        if(checkOsCmdRetCode(p.returncode, src, dest) == 0):
-                            ind += 1
-                            continue
-                        else:
-                            return
-                print "%s not matched by backup rules, skipping ..." % fd
-                continue
+                return False
+        assert ind == len(camelxConfigList) + 1
+        return True
+
 
 # Main
 # **********************************
 if __name__ == "__main__":
-    argParser = argparse.ArgumentParser(description = 'Run backups according to config file (%s) in the source path/device' % CFG_FILE_NAME)
-    argParser.add_argument('-s', '--src', action = 'store', required = True, help = 'Root path of the source folder or device')
-    argParser.add_argument('-d', '--dst', action = 'store', required = True, help = 'Root path of the target backup folder or device')
+    argParser = argparse.ArgumentParser(description = 'Run backups according to config file (%s) in the target path' % CFG_FILE_NAME)
+    argParser.add_argument('-c', '--cfg', action = 'store', required = True, help = 'Path of dir containing the config file %s' % CFG_FILE_NAME)
     args = argParser.parse_args()
     
-    cfgParser = ReadCfg(os.path.join(args.src, CFG_FILE_NAME))
-    bkRunner = BackupRunner(cfgParser, args.src, args.dst)
+    camelxConfigParser = CamelxConfigParser(os.path.join(args.cfg, CFG_FILE_NAME))
+    bkRunner = BackupRunner(camelxConfigParser)
     try:
         bkRunner.Run()
     except ValueError, ve:
