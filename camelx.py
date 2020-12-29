@@ -114,10 +114,13 @@ class BackupRunner(object):
     #            p.communicate()
     #            print "net-use returned %d" % p.returncode
     
-    def Run(self):
+    def run(self):
         #self.__mount_unc_if_needed__()
         camelxConfigList = self.camelxConfigParser.parse()
+        succCamelxConfigList = []
+        failedCamelxConfigList = []
         ind = 1
+        result = True
         for camelxConfig in camelxConfigList:
             print "*" * 60
             print "* NO. %d" % (ind)
@@ -130,11 +133,35 @@ class BackupRunner(object):
             p.communicate()
             if(checkOsCmdRetCode(p.returncode, camelxConfig.srcPath, camelxConfig.destPath) == 0):
                 ind += 1
+                succCamelxConfigList.append(camelxConfig)
                 continue
             else:
-                return False
-        assert ind == len(camelxConfigList) + 1
-        return True
+                failedCamelxConfigList.append(camelxConfig)
+                result = False
+                break
+        self.doSummarize(succCamelxConfigList, failedCamelxConfigList)
+        return result
+
+    def doSummarize(self, succCamelxConfigList = [], failedCamelxConfigList = []):
+        print("\n*" * 60)
+        print("* Backup %s" % "succeeded!" if len(succCamelxConfigList) > 0 and len(failedCamelxConfigList) <= 0 else "failed!")
+        print("*" * 60)
+        if len(succCamelxConfigList) > 0:
+            print("\nSucceeded:")
+            ind = 1
+            for scc in succCamelxConfigList:
+                print("[%d]" % ind)
+                print("SRC = %s" % scc.srcPath)
+                print("DST = %s" % scc.destPath)
+                ind += 1
+        if len(failedCamelxConfigList) > 0:
+            print("\nFailed:")
+            ind = 1
+            for fcc in failedCamelxConfigList:
+                print("[%d]" % ind)
+                print("SRC = %s" % fcc.srcPath)
+                print("DST = %s" % fcc.destPath)
+                ind += 1
 
 
 # Main
@@ -147,7 +174,7 @@ if __name__ == "__main__":
     camelxConfigParser = CamelxConfigParser(os.path.join(args.cfg, CFG_FILE_NAME))
     bkRunner = BackupRunner(camelxConfigParser)
     try:
-        bkRunner.Run()
+        bkRunner.run()
     except ValueError, ve:
         print '[ERROR] ' + ve.message
         sys.exit(1)
