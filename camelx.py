@@ -99,8 +99,9 @@ def checkOsCmdRetCode(returncode, src, dest):
 # Backup runner class
 # **********************************
 class BackupRunner(object):
-    def __init__(self, camelxConfigParser):
+    def __init__(self, camelxConfigParser, dry_run = False):
         self.camelxConfigParser = camelxConfigParser
+        self.dry_run = dry_run
 
     #def __mount_unc_if_needed__(self):
     #        if(self.cfgParser.has_option('DEFAULT', 'unc.root')):
@@ -126,13 +127,16 @@ class BackupRunner(object):
             print "* NO. %d" % (ind)
             print "* src = " + camelxConfig.srcPath
             print "* dst = " + camelxConfig.destPath
+            ind += 1
             time.sleep(0.5)
+            if self.dry_run:
+                succCamelxConfigList.append(camelxConfig)
+                continue
             __cmd__ = getOsCmd(camelxConfig.srcPath, camelxConfig.destPath)
             print __cmd__
             p = subprocess.Popen(__cmd__, shell = True)
             p.communicate()
             if(checkOsCmdRetCode(p.returncode, camelxConfig.srcPath, camelxConfig.destPath) == 0):
-                ind += 1
                 succCamelxConfigList.append(camelxConfig)
                 continue
             else:
@@ -145,6 +149,7 @@ class BackupRunner(object):
     def doSummarize(self, succCamelxConfigList = [], failedCamelxConfigList = []):
         print("*" * 60)
         print("* Backup %s" % "succeeded!" if len(succCamelxConfigList) > 0 and len(failedCamelxConfigList) <= 0 else "failed!")
+        print("dry-run = True" if self.dry_run else "")
         print("*" * 60)
         if len(succCamelxConfigList) > 0:
             print("\nSucceeded:")
@@ -169,10 +174,11 @@ class BackupRunner(object):
 if __name__ == "__main__":
     argParser = argparse.ArgumentParser(description = 'Run backups according to config file (%s) in the target path' % CFG_FILE_NAME)
     argParser.add_argument('-c', '--cfg', action = 'store', required = True, help = 'Path of dir containing the config file %s' % CFG_FILE_NAME)
+    argParser.add_argument('-d', '--dry-run', action = 'store_true', required = False, help = 'Dry run the backup (show cmds only)')
     args = argParser.parse_args()
     
     camelxConfigParser = CamelxConfigParser(os.path.join(args.cfg, CFG_FILE_NAME))
-    bkRunner = BackupRunner(camelxConfigParser)
+    bkRunner = BackupRunner(camelxConfigParser, args.dry_run)
     try:
         bkRunner.run()
     except ValueError, ve:
