@@ -3,7 +3,7 @@ import os.path
 import sys
 import argparse
 import subprocess
-import ConfigParser
+from configparser import ConfigParser
 import time
 import platform
 
@@ -35,8 +35,8 @@ class CamelxConfigParser(object):
         self.cfgParser = self.readCfg()
 
     def readCfg(self):
-        srcCfgParser = ConfigParser.ConfigParser()
-        print "Read cfg %s" % self.cfgFile
+        srcCfgParser = ConfigParser()
+        print("Read cfg %s" % self.cfgFile)
         files = srcCfgParser.read([self.cfgFile])
         if not files:
             raise Exception('Unable to read backup config file at %s' % self.cfgFile)
@@ -76,21 +76,21 @@ def checkOsCmdRetCode(returncode, src, dest):
     currOs = platform.system()
     if(OS_WINDOWS == currOs):
         if(returncode == 1):
-            print "[OK] %s --> %s succeeded" % (src, dest)
+            print("[OK] %s --> %s succeeded" % (src, dest))
             return 0
         elif(returncode < 8):
-            print "[OK] %s --> %s finished (robocopy returned %d)" % (src, dest, returncode)
+            print("[OK] %s --> %s finished (robocopy returned %d)" % (src, dest, returncode))
             return 0
         else:
-            print "[ERROR] Failed %s --> %s (robocopy returned %d)" % (src, dest, returncode)
-            print "[ERROR] Backup terminated with error"
+            print("[ERROR] Failed %s --> %s (robocopy returned %d)" % (src, dest, returncode))
+            print("[ERROR] Backup terminated with error")
             return 1
     elif(OS_OSX == currOs):
         if(returncode == 0):
-            print "[OK] %s --> %s succeeded" % (src, dest)
+            print("[OK] %s --> %s succeeded" % (src, dest))
             return 0
         else:
-            print "[ERROR] Failed %s --> %s (rsync returned %d)" % (src, dest, returncode)
+            print("[ERROR] Failed %s --> %s (rsync returned %d)" % (src, dest, returncode))
             return 1
     else:
         raise Exception('OS not supported yet: neither OSX nor Windows') 
@@ -123,17 +123,17 @@ class BackupRunner(object):
         ind = 1
         result = True
         for camelxConfig in camelxConfigList:
-            print "*" * 60
-            print "* NO. %d" % (ind)
-            print "* src = " + camelxConfig.srcPath
-            print "* dst = " + camelxConfig.destPath
+            print("*" * 60)
+            print("* NO. %d" % (ind))
+            print("* src = " + camelxConfig.srcPath)
+            print("* dst = " + camelxConfig.destPath)
             ind += 1
             time.sleep(0.5)
             if self.dry_run:
                 succCamelxConfigList.append(camelxConfig)
                 continue
             __cmd__ = getOsCmd(camelxConfig.srcPath, camelxConfig.destPath)
-            print __cmd__
+            print(__cmd__)
             p = subprocess.Popen(__cmd__, shell = True)
             p.communicate()
             if(checkOsCmdRetCode(p.returncode, camelxConfig.srcPath, camelxConfig.destPath) == 0):
@@ -181,6 +181,6 @@ if __name__ == "__main__":
     bkRunner = BackupRunner(camelxConfigParser, args.dry_run)
     try:
         bkRunner.run()
-    except ValueError, ve:
-        print '[ERROR] ' + ve.message
+    except ValueError as ve:
+        print('[ERROR] ' + ve.message)
         sys.exit(1)
